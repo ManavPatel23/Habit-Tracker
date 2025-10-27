@@ -10,8 +10,8 @@ import os
 st.set_page_config(page_title="Habit Tracker", page_icon="📅", layout="wide")
 
 # GitHub Gists configuration
-GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
-GIST_ID = st.secrets.get("GIST_ID", "")
+GITHUB_TOKEN = "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"
+GIST_ID = "29a805889c4d70a40d9f14b7b7c30029"
 
 def load_from_gist():
     """Load data from GitHub Gist"""
