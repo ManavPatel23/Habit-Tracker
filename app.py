@@ -2,29 +2,46 @@ import streamlit as st
 import calendar
 from datetime import datetime, date
 import json
-import os
 from collections import defaultdict
+import requests
 
 # Page config
 st.set_page_config(page_title="Habit Tracker", page_icon="📅", layout="wide")
 
-# File to store habit data
-DATA_FILE = "habit_data.json"
+# Google Sheets configuration
+SHEET_ID = "1jiMRMTmGRgk_i4vLLDdIUR8y4f95g1aVmvMgy0yzpMw"
+SHEET_NAME = "Sheet1"
 
-# Load data from file
+def get_sheet_url():
+    return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
+
+def get_sheet_edit_url():
+    return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
+
+# Load data from Google Sheets
 def load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, 'r') as f:
-                return json.load(f)
-        except:
-            return get_default_data()
+    try:
+        # Try to load from Google Sheets
+        response = requests.get(get_sheet_url())
+        if response.status_code == 200:
+            lines = response.text.strip().split('\n')
+            if len(lines) > 1:  # Check if there's data beyond header
+                # Get the data from first row (removing quotes)
+                data_str = lines[1].strip('"')
+                if data_str:
+                    return json.loads(data_str)
+    except Exception as e:
+        st.warning(f"Could not load from Google Sheets: {e}")
+    
     return get_default_data()
 
-# Save data to file
+# Save data to Google Sheets (via manual update)
 def save_data(data):
-    with open(DATA_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
+    # Store in session state
+    st.session_state.habits = data
+    
+    # Generate the JSON string for manual copying
+    st.session_state.last_save_json = json.dumps(data, indent=2)
 
 # Default data structure
 def get_default_data():
@@ -68,6 +85,9 @@ if 'current_year' not in st.session_state:
 
 if 'view_mode' not in st.session_state:
     st.session_state.view_mode = 'calendar'
+
+if 'last_save_json' not in st.session_state:
+    st.session_state.last_save_json = ""
 
 # Custom CSS
 st.markdown("""
@@ -171,6 +191,16 @@ st.markdown("""
     
     .stTextArea textarea:focus {
         border-color: #555 !important;
+    }
+    
+    .save-notice {
+        background: #1a3a1a;
+        border: 1px solid #2a5a2a;
+        border-radius: 5px;
+        padding: 10px;
+        margin: 10px 0;
+        color: #88ff88;
+        font-size: 12px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -294,6 +324,28 @@ with st.sidebar:
     
     # Data management
     st.subheader("📦 Data Management")
+    
+    # Google Sheets sync
+    with st.expander("☁️ Google Sheets Sync"):
+        st.markdown("**Current Sheet:**")
+        st.markdown(f"[Open Google Sheet]({get_sheet_edit_url()})")
+        
+        if st.button("🔄 Load from Sheet", use_container_width=True):
+            loaded_data = load_data()
+            st.session_state.habits = loaded_data
+            st.success("Loaded from Google Sheets!")
+            st.rerun()
+        
+        if st.button("💾 Prepare to Save", use_container_width=True):
+            save_data(st.session_state.habits)
+            st.success("Data ready to save!")
+        
+        if st.session_state.last_save_json:
+            st.markdown("**Copy this to cell A2 in your sheet:**")
+            st.code(st.session_state.last_save_json, language="json")
+            st.info("1. Copy the JSON above\n2. Open the Google Sheet\n3. Paste into cell A2\n4. Click 'Load from Sheet' to verify")
+    
+    st.divider()
     
     data_json = json.dumps(st.session_state.habits, indent=2)
     st.download_button(
@@ -498,6 +550,18 @@ with tab2:
                          justify-content: center; color: white; font-weight: bold;'>
                         {count} ({percentage:.1f}%)
                     </div>
+                </div>
+                """, unsafe_allow_html=True)
+        
+        with pie_cols[1]:
+            st.markdown("### Totals")
+            for habit_name, count in monthly_data.items():
+                color = st.session_state.habits[habit_name]['color']
+                st.markdown(f"""
+                <div style='padding: 10px; margin: 5px 0; background: #1a1a1a; 
+                     border-left: 12px solid {color}; border-radius: 5px;'>
+                    <div style='color: white; font-weight: bold;'>{habit_name}</div>
+                    <div style='color: {color}; font-size: 24px;'>{count}</div>
                 </div>
                 """, unsafe_allow_html=True)
     else:
