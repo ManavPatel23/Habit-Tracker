@@ -4,6 +4,9 @@ from datetime import datetime, date
 import json
 from collections import defaultdict
 import requests
+import gspread
+from google.oauth2.service_account import Credentials
+import os
 
 # Page config
 st.set_page_config(page_title="Habit Tracker", page_icon="📅", layout="wide")
@@ -12,16 +15,87 @@ st.set_page_config(page_title="Habit Tracker", page_icon="📅", layout="wide")
 SHEET_ID = "1jiMRMTmGRgk_i4vLLDdIUR8y4f95g1aVmvMgy0yzpMw"
 SHEET_NAME = "Sheet1"
 
+# Google Sheets API setup
+SCOPE = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+
 def get_sheet_url():
     return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
 
 def get_sheet_edit_url():
     return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
 
+def get_google_sheets_client():
+    """Initialize Google Sheets client with service account credentials"""
+    try:
+        # Check if credentials file exists
+        creds_file = "google_credentials.json"
+        if not os.path.exists(creds_file):
+            return None
+        
+        # Load credentials
+        creds = Credentials.from_service_account_file(creds_file, scopes=SCOPE)
+        client = gspread.authorize(creds)
+        return client
+    except Exception as e:
+        st.error(f"Error initializing Google Sheets client: {e}")
+        return None
+
+def save_to_google_sheets(data):
+    """Save data directly to Google Sheets"""
+    client = get_google_sheets_client()
+    if not client:
+        return False
+    
+    try:
+        # Open the spreadsheet
+        sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+        
+        # Clear existing data and add new data
+        sheet.clear()
+        
+        # Add header
+        sheet.append_row(["Habit Data"])
+        
+        # Add JSON data
+        sheet.append_row([json.dumps(data, indent=2)])
+        
+        return True
+    except Exception as e:
+        st.error(f"Error saving to Google Sheets: {e}")
+        return False
+
+def load_from_google_sheets():
+    """Load data directly from Google Sheets"""
+    client = get_google_sheets_client()
+    if not client:
+        return None
+    
+    try:
+        # Open the spreadsheet
+        sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+        
+        # Get all values
+        values = sheet.get_all_values()
+        
+        if len(values) >= 2:
+            # Parse JSON data from second row
+            data_str = values[1][0] if len(values[1]) > 0 else ""
+            if data_str:
+                return json.loads(data_str)
+    except Exception as e:
+        st.error(f"Error loading from Google Sheets: {e}")
+    
+    return None
+
 # Load data from Google Sheets
 def load_data():
+    # First try the new API method
+    api_data = load_from_google_sheets()
+    if api_data:
+        return api_data
+    
+    # Fallback to CSV method if API is not available
     try:
-        # Try to load from Google Sheets
         response = requests.get(get_sheet_url())
         if response.status_code == 200:
             lines = response.text.strip().split('\n')
@@ -35,13 +109,18 @@ def load_data():
     
     return get_default_data()
 
-# Save data to Google Sheets (via manual update)
+# Save data to Google Sheets (automatic)
 def save_data(data):
     # Store in session state
     st.session_state.habits = data
     
-    # Generate the JSON string for manual copying
-    st.session_state.last_save_json = json.dumps(data, indent=2)
+    # Try to save automatically to Google Sheets
+    if save_to_google_sheets(data):
+        st.session_state.last_save_status = "✅ Auto-saved to Google Sheets"
+    else:
+        # Fallback: generate JSON for manual copying if API fails
+        st.session_state.last_save_json = json.dumps(data, indent=2)
+        st.session_state.last_save_status = "⚠️ Manual save required - see instructions below"
 
 # Default data structure
 def get_default_data():
@@ -88,6 +167,9 @@ if 'view_mode' not in st.session_state:
 
 if 'last_save_json' not in st.session_state:
     st.session_state.last_save_json = ""
+
+if 'last_save_status' not in st.session_state:
+    st.session_state.last_save_status = ""
 
 # Custom CSS
 st.markdown("""
@@ -330,18 +412,50 @@ with st.sidebar:
         st.markdown("**Current Sheet:**")
         st.markdown(f"[Open Google Sheet]({get_sheet_edit_url()})")
         
-        if st.button("🔄 Load from Sheet", use_container_width=True):
-            loaded_data = load_data()
-            st.session_state.habits = loaded_data
-            st.success("Loaded from Google Sheets!")
-            st.rerun()
+        # Check if credentials are available
+        creds_available = os.path.exists("google_credentials.json")
         
-        if st.button("💾 Prepare to Save", use_container_width=True):
-            save_data(st.session_state.habits)
-            st.success("Data ready to save!")
+        if creds_available:
+            st.success("🔑 Google Sheets API credentials found - Auto-sync enabled!")
+            
+            if st.button("🔄 Load from Sheet", use_container_width=True):
+                loaded_data = load_data()
+                st.session_state.habits = loaded_data
+                st.success("Loaded from Google Sheets!")
+                st.rerun()
+            
+            if st.button("💾 Save to Sheet", use_container_width=True):
+                save_data(st.session_state.habits)
+                st.rerun()
+            
+            # Show last save status
+            if st.session_state.last_save_status:
+                if "✅" in st.session_state.last_save_status:
+                    st.success(st.session_state.last_save_status)
+                else:
+                    st.warning(st.session_state.last_save_status)
+        else:
+            st.warning("⚠️ Google Sheets API credentials not found")
+            st.markdown("**To enable automatic sync:**")
+            st.markdown("""
+            1. Create a Google Cloud Project
+            2. Enable Google Sheets API
+            3. Create a Service Account
+            4. Download the JSON credentials file
+            5. Rename it to `google_credentials.json`
+            6. Place it in the same folder as this app
+            7. Share your Google Sheet with the service account email
+            """)
+            
+            if st.button("🔄 Load from Sheet (CSV)", use_container_width=True):
+                loaded_data = load_data()
+                st.session_state.habits = loaded_data
+                st.success("Loaded from Google Sheets!")
+                st.rerun()
         
-        if st.session_state.last_save_json:
-            st.markdown("**Copy this to cell A2 in your sheet:**")
+        # Fallback manual instructions (only show if API failed)
+        if st.session_state.last_save_json and not creds_available:
+            st.markdown("**Manual Save Instructions:**")
             st.code(st.session_state.last_save_json, language="json")
             st.info("1. Copy the JSON above\n2. Open the Google Sheet\n3. Paste into cell A2\n4. Click 'Load from Sheet' to verify")
     
