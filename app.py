@@ -10,7 +10,7 @@ import os
 st.set_page_config(page_title="Habit Tracker", page_icon="📅", layout="wide")
 
 # GitHub Gists configuration
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "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"
 GIST_ID = "29a805889c4d70a40d9f14b7b7c30029"
 
 def load_from_gist():
