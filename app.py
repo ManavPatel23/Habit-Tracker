@@ -4,123 +4,82 @@ from datetime import datetime, date
 import json
 from collections import defaultdict
 import requests
-import gspread
-from google.oauth2.service_account import Credentials
 import os
 
 # Page config
 st.set_page_config(page_title="Habit Tracker", page_icon="📅", layout="wide")
 
-# Google Sheets configuration
-SHEET_ID = "1jiMRMTmGRgk_i4vLLDdIUR8y4f95g1aVmvMgy0yzpMw"
-SHEET_NAME = "Sheet1"
+# GitHub Gists configuration
+GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")
+GIST_ID = st.secrets.get("GIST_ID", "")
 
-# Google Sheets API setup
-SCOPE = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
-
-def get_sheet_url():
-    return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq?tqx=out:csv&sheet={SHEET_NAME}"
-
-def get_sheet_edit_url():
-    return f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/edit"
-
-def get_google_sheets_client():
-    """Initialize Google Sheets client with service account credentials"""
-    try:
-        # Check if credentials file exists
-        creds_file = "google_credentials.json"
-        if not os.path.exists(creds_file):
-            return None
-        
-        # Load credentials
-        creds = Credentials.from_service_account_file(creds_file, scopes=SCOPE)
-        client = gspread.authorize(creds)
-        return client
-    except Exception as e:
-        st.error(f"Error initializing Google Sheets client: {e}")
-        return None
-
-def save_to_google_sheets(data):
-    """Save data directly to Google Sheets"""
-    client = get_google_sheets_client()
-    if not client:
-        return False
-    
-    try:
-        # Open the spreadsheet
-        sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
-        
-        # Clear existing data and add new data
-        sheet.clear()
-        
-        # Add header
-        sheet.append_row(["Habit Data"])
-        
-        # Add JSON data
-        sheet.append_row([json.dumps(data, indent=2)])
-        
-        return True
-    except Exception as e:
-        st.error(f"Error saving to Google Sheets: {e}")
-        return False
-
-def load_from_google_sheets():
-    """Load data directly from Google Sheets"""
-    client = get_google_sheets_client()
-    if not client:
+def load_from_gist():
+    """Load data from GitHub Gist"""
+    if not GIST_ID or not GITHUB_TOKEN:
         return None
     
     try:
-        # Open the spreadsheet
-        sheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        response = requests.get(f"https://api.github.com/gists/{GIST_ID}", headers=headers)
         
-        # Get all values
-        values = sheet.get_all_values()
-        
-        if len(values) >= 2:
-            # Parse JSON data from second row
-            data_str = values[1][0] if len(values[1]) > 0 else ""
-            if data_str:
-                return json.loads(data_str)
+        if response.status_code == 200:
+            gist_data = response.json()
+            content = gist_data['files']['habit_data.json']['content']
+            return json.loads(content)
+        else:
+            st.error(f"Failed to load from Gist: {response.status_code}")
     except Exception as e:
-        st.error(f"Error loading from Google Sheets: {e}")
+        st.error(f"Error loading from Gist: {e}")
     
     return None
 
-# Load data from Google Sheets
-def load_data():
-    # First try the new API method
-    api_data = load_from_google_sheets()
-    if api_data:
-        return api_data
+def save_to_gist(data):
+    """Save data to GitHub Gist"""
+    if not GIST_ID or not GITHUB_TOKEN:
+        return False
     
-    # Fallback to CSV method if API is not available
     try:
-        response = requests.get(get_sheet_url())
+        headers = {"Authorization": f"token {GITHUB_TOKEN}"}
+        payload = {
+            "files": {
+                "habit_data.json": {"content": json.dumps(data, indent=2)}
+            }
+        }
+        
+        response = requests.patch(f"https://api.github.com/gists/{GIST_ID}", 
+                               json=payload, headers=headers)
+        
         if response.status_code == 200:
-            lines = response.text.strip().split('\n')
-            if len(lines) > 1:  # Check if there's data beyond header
-                # Get the data from first row (removing quotes)
-                data_str = lines[1].strip('"')
-                if data_str:
-                    return json.loads(data_str)
+            return True
+        else:
+            st.error(f"Failed to save to Gist: {response.status_code}")
+            return False
     except Exception as e:
-        st.warning(f"Could not load from Google Sheets: {e}")
+        st.error(f"Error saving to Gist: {e}")
+        return False
+
+# Load data from GitHub Gist
+def load_data():
+    # Try to load from GitHub Gist
+    gist_data = load_from_gist()
+    if gist_data:
+        return gist_data
     
+    # Fallback to default data if Gist is not available
     return get_default_data()
 
-# Save data to Google Sheets (automatic)
+# Save data to GitHub Gist (automatic)
 def save_data(data):
     # Store in session state
     st.session_state.habits = data
     
-    # Try to save automatically to Google Sheets
-    if save_to_google_sheets(data):
-        st.session_state.last_save_status = "✅ Auto-saved to Google Sheets"
+    # Try to save automatically to GitHub Gist
+    if save_to_gist(data):
+        st.session_state.last_save_status = "✅ Auto-saved to GitHub Gist"
     else:
         # Fallback: generate JSON for manual copying if API fails
         st.session_state.last_save_json = json.dumps(data, indent=2)
-        st.session_state.last_save_status = "⚠️ Manual save required - see instructions below"
+        st.session_state.last_save_status = "⚠️ Manual save required - GitHub Gist not available"
 
 # Default data structure
 def get_default_data():
@@ -407,24 +366,22 @@ with st.sidebar:
     # Data management
     st.subheader("📦 Data Management")
     
-    # Google Sheets sync
-    with st.expander("☁️ Google Sheets Sync"):
-        st.markdown("**Current Sheet:**")
-        st.markdown(f"[Open Google Sheet]({get_sheet_edit_url()})")
-        
+    # GitHub Gists sync
+    with st.expander("☁️ GitHub Gists Sync"):
         # Check if credentials are available
-        creds_available = os.path.exists("google_credentials.json")
+        gist_available = GIST_ID and GITHUB_TOKEN
         
-        if creds_available:
-            st.success("🔑 Google Sheets API credentials found - Auto-sync enabled!")
+        if gist_available:
+            st.success("🔑 GitHub Gist credentials found - Auto-sync enabled!")
+            st.markdown(f"**Gist ID:** `{GIST_ID}`")
             
-            if st.button("🔄 Load from Sheet", use_container_width=True):
+            if st.button("🔄 Load from Gist", use_container_width=True):
                 loaded_data = load_data()
                 st.session_state.habits = loaded_data
-                st.success("Loaded from Google Sheets!")
+                st.success("Loaded from GitHub Gist!")
                 st.rerun()
             
-            if st.button("💾 Save to Sheet", use_container_width=True):
+            if st.button("💾 Save to Gist", use_container_width=True):
                 save_data(st.session_state.habits)
                 st.rerun()
             
@@ -435,29 +392,31 @@ with st.sidebar:
                 else:
                     st.warning(st.session_state.last_save_status)
         else:
-            st.warning("⚠️ Google Sheets API credentials not found")
+            st.warning("⚠️ GitHub Gist credentials not found")
             st.markdown("**To enable automatic sync:**")
             st.markdown("""
-            1. Create a Google Cloud Project
-            2. Enable Google Sheets API
-            3. Create a Service Account
-            4. Download the JSON credentials file
-            5. Rename it to `google_credentials.json`
-            6. Place it in the same folder as this app
-            7. Share your Google Sheet with the service account email
-            """)
+            1. Create a GitHub Personal Access Token:
+               - Go to GitHub → Settings → Developer settings
+               - Personal access tokens → Tokens (classic)
+               - Generate new token → Check "gist" permission
+               - Copy the token
             
-            if st.button("🔄 Load from Sheet (CSV)", use_container_width=True):
-                loaded_data = load_data()
-                st.session_state.habits = loaded_data
-                st.success("Loaded from Google Sheets!")
-                st.rerun()
+            2. Create a GitHub Gist:
+               - Go to gist.github.com
+               - Create new gist with filename "habit_data.json"
+               - Add content: `{}`
+               - Copy the Gist ID from URL
+            
+            3. Add to Streamlit secrets:
+               - `GITHUB_TOKEN`: your token
+               - `GIST_ID`: your gist id
+            """)
         
-        # Fallback manual instructions (only show if API failed)
-        if st.session_state.last_save_json and not creds_available:
+        # Fallback manual instructions (only show if Gist failed)
+        if st.session_state.last_save_json and not gist_available:
             st.markdown("**Manual Save Instructions:**")
             st.code(st.session_state.last_save_json, language="json")
-            st.info("1. Copy the JSON above\n2. Open the Google Sheet\n3. Paste into cell A2\n4. Click 'Load from Sheet' to verify")
+            st.info("Copy the JSON above and manually update your GitHub Gist")
     
     st.divider()
     
