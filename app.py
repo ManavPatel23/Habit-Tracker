@@ -353,16 +353,6 @@ with st.sidebar:
     
     st.divider()
     
-    if st.button("🗑️ Clear All Data", use_container_width=True):
-        for habit in st.session_state.habits:
-            if habit != 'notes':
-                st.session_state.habits[habit]['count'] = {}
-        save_data(st.session_state.habits)
-        st.success("All data cleared!")
-        st.rerun()
-    
-    st.divider()
-    
     # Data management
     st.subheader("📦 Data Management")
     
