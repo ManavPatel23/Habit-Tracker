@@ -9,9 +9,9 @@ import os
 # Page config
 st.set_page_config(page_title="Habit Tracker", page_icon="📅", layout="wide")
 
-# GitHub Gists configuration
-GITHUB_TOKEN = "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"
-GIST_ID = "d1c9e98d8fc72582908758dc2ea77162"
+# GitHub Gists configuration (read from Streamlit Secrets or environment)
+GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", os.getenv("GITHUB_TOKEN", ""))
+GIST_ID = st.secrets.get("GIST_ID", os.getenv("GIST_ID", ""))
 
 def load_from_gist():
     """Load data from GitHub Gist"""
