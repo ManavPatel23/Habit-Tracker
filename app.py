@@ -506,18 +506,21 @@ with tab1:
     
     st.divider()
     
-    # Monthly Notes Section
-    st.subheader(f"📝 Notes for {calendar.month_name[st.session_state.current_month]} {st.session_state.current_year}")
+    # Yearly Notes Section
+    st.divider()
     
-    note_key = f"{st.session_state.current_year}-{st.session_state.current_month:02d}"
+    # Yearly Notes Section
+    st.subheader(f"📝 Notes for {st.session_state.current_year}")
+    
+    note_key = f"{st.session_state.current_year}"
     current_note = st.session_state.habits['notes'].get(note_key, "")
     
     note_text = st.text_area(
-        "Monthly notes, thoughts, goals...",
+        "Yearly notes, thoughts, goals...",
         value=current_note,
         height=200,
-        key="month_notes",
-        placeholder="Write your thoughts, goals, reflections for this month...",
+        key="year_notes",
+        placeholder="Write your thoughts, goals, reflections for this year...",
         label_visibility="collapsed"
     )
     
