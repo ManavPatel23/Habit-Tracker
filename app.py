@@ -603,54 +603,6 @@ with st.form("add_journal_entry"):
 
 st.divider()
 
-if len(notes) == 0:
-    st.info("No notes yet.")
-else:
-    # Dropdown list for selection
-    select_options = [
-        f"{datetime.strptime(n['date'], '%Y-%m-%d').strftime('%d %b %Y')} — {n['text'][:40]}..."
-        for n in notes
-    ]
-
-    selected_index = st.selectbox(
-        "Choose a note to edit or delete:",
-        options=list(range(len(notes))),
-        format_func=lambda i: select_options[i]
-    )
-
-    selected_note = notes[selected_index]
-
-    edit_colA, edit_colB = st.columns([2,1])
-
-    with edit_colA:
-        edited_text = st.text_area("Edit text", value=selected_note["text"], key="edit_text")
-
-    with edit_colB:
-        edited_date = st.date_input(
-            "Edit Date",
-            value=datetime.strptime(selected_note["date"], "%Y-%m-%d"),
-            key="edit_date"
-        )
-
-    save_edit = st.button("💾 Save Changes")
-
-    if save_edit:
-        st.session_state.habits["notes"][selected_index] = {
-            "date": edited_date.strftime("%Y-%m-%d"),
-            "text": edited_text
-        }
-        save_data(st.session_state.habits)
-        st.success("Note updated!")
-        st.rerun()
-
-    delete_note = st.button("🗑️ Delete This Note")
-
-    if delete_note:
-        st.session_state.habits["notes"].pop(selected_index)
-        save_data(st.session_state.habits)
-        st.warning("Note deleted!")
-        st.rerun()
-
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
