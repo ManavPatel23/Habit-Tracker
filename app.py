@@ -575,7 +575,6 @@ for i in range(0, len(notes), 5):
             )
 
 st.divider()
-st.subheader("📝 Add New Journal Entry")
 
 with st.form("add_journal_entry"):
 
@@ -603,7 +602,6 @@ with st.form("add_journal_entry"):
 
 
 st.divider()
-st.subheader("✏️ Edit or 🗑️ Delete a Note")
 
 if len(notes) == 0:
     st.info("No notes yet.")
@@ -621,8 +619,6 @@ else:
     )
 
     selected_note = notes[selected_index]
-
-    st.markdown("### ✏️ Edit Note")
 
     edit_colA, edit_colB = st.columns([2,1])
 
