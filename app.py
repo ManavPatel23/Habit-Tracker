@@ -532,7 +532,7 @@ notes = sorted(
 
 postit_style = """
     background-color: #F5C857;
-    padding: 12px;
+    padding-left: 15px;
     border-radius: 8px;
     box-shadow: 0px 6px 16px rgba(0,0,0,0.4);
     margin: 8px;
@@ -542,14 +542,17 @@ postit_style = """
 """
 
 date_style = """
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
-    margin-bottom: 6px;
+    color: #222222;
+    margin-top: -35px;
+    margin-bottom: -35px;
 """
 
 text_style = """
-    font-size: 16px;
+    font-size: 17px;
     line-height: 1.5;
+    margin-bottom: -20px;
 """
 
 for i in range(0, len(notes), 5):
