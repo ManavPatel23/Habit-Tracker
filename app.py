@@ -509,6 +509,26 @@ with tab1:
 st.divider()
 st.subheader("📝 Journal Entries")
 
+# Render 5 cards per row
+for i in range(0, len(notes), 5):
+    row = notes[i:i+5]
+    cols = st.columns(5)
+
+    for idx, entry in enumerate(row):
+        with cols[idx]:
+            # display in the new format
+            formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
+
+            st.markdown(
+                f"""
+                <div style="{postit_style}">
+                    <div style="{date_style}">{formatted_date}</div>
+                    <div style="{text_style}">{entry['text']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
 # Ensure notes are stored as a list
 if not isinstance(st.session_state.habits.get("notes", {}), list):
     old_notes = st.session_state.habits.get("notes", {})
@@ -575,28 +595,6 @@ text_style = """
     line-height: 1.5;
     margin-bottom: -20px;
 """
-
-st.markdown("### 📌 Your Notes")
-
-# Render 5 cards per row
-for i in range(0, len(notes), 5):
-    row = notes[i:i+5]
-    cols = st.columns(5)
-
-    for idx, entry in enumerate(row):
-        with cols[idx]:
-            # display in the new format
-            formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
-
-            st.markdown(
-                f"""
-                <div style="{postit_style}">
-                    <div style="{date_style}">{formatted_date}</div>
-                    <div style="{text_style}">{entry['text']}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
