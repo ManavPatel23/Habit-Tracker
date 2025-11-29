@@ -506,31 +506,97 @@ with tab1:
     
     st.divider()
     
-    # Yearly Notes Section
-    st.divider()
-    
-    # Yearly Notes Section
-    st.subheader(f"📝 Notes for {st.session_state.current_year}")
-    
-    note_key = f"{st.session_state.current_year}"
-    current_note = st.session_state.habits['notes'].get(note_key, "")
-    
-    note_text = st.text_area(
-        "Yearly notes, thoughts, goals...",
-        value=current_note,
-        height=200,
-        key="year_notes",
-        placeholder="Write your thoughts, goals, reflections for this year...",
-        label_visibility="collapsed"
-    )
-    
-    col1, col2 = st.columns([6, 1])
-    with col2:
-        if st.button("💾 Save Note", use_container_width=True):
-            st.session_state.habits['notes'][note_key] = note_text
-            save_data(st.session_state.habits)
-            st.success("Note saved!")
-            st.rerun()
+st.divider()
+st.subheader("📝 Journal Entries")
+
+# Ensure notes are stored as a list
+if not isinstance(st.session_state.habits.get("notes", {}), list):
+    old_notes = st.session_state.habits.get("notes", {})
+    converted = []
+    for yr, txt in old_notes.items():
+        converted.append({
+            "date": f"{yr}-01-01",
+            "text": txt
+        })
+    st.session_state.habits["notes"] = converted
+    save_data(st.session_state.habits)
+
+with st.form("add_journal_entry"):
+    colA, colB = st.columns([2,1])
+
+    with colA:
+        new_text = st.text_area(
+            "Write your note...",
+            placeholder="Your thoughts, reflections, ideas..."
+        )
+
+    with colB:
+        chosen_date = st.date_input("Select Date")
+
+    submitted = st.form_submit_button("Add Entry")
+
+    if submitted and new_text.strip():
+        st.session_state.habits["notes"].append({
+            "date": chosen_date.strftime("%Y-%m-%d"),   # store sortable format
+            "text": new_text.strip()
+        })
+        save_data(st.session_state.habits)
+        st.success("Journal entry added!")
+        st.rerun()
+
+notes = st.session_state.habits["notes"]
+notes = sorted(
+    notes,
+    key=lambda x: datetime.strptime(x["date"], "%Y-%m-%d"),
+    reverse=True
+)
+
+postit_style = """
+    background-color: #F5C857;
+    padding-left: 15px;
+    border-radius: 8px;
+    box-shadow: 0px 6px 16px rgba(0,0,0,0.4);
+    margin: 8px;
+    font-family: 'Helvetica Neue', sans-serif;
+    color: #222222;
+    white-space: pre-wrap;
+"""
+
+date_style = """
+    font-size: 20px;
+    font-weight: 700;
+    color: #222222;
+    margin-top: -35px;
+    margin-bottom: -35px;
+"""
+
+text_style = """
+    font-size: 17px;
+    line-height: 1.5;
+    margin-bottom: -20px;
+"""
+
+st.markdown("### 📌 Your Notes")
+
+# Render 5 cards per row
+for i in range(0, len(notes), 5):
+    row = notes[i:i+5]
+    cols = st.columns(5)
+
+    for idx, entry in enumerate(row):
+        with cols[idx]:
+            # display in the new format
+            formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
+
+            st.markdown(
+                f"""
+                <div style="{postit_style}">
+                    <div style="{date_style}">{formatted_date}</div>
+                    <div style="{text_style}">{entry['text']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
