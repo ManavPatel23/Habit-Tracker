@@ -507,27 +507,7 @@ with tab1:
     st.divider()
     
 st.divider()
-st.subheader("📝 Journal Entries")
-
-# Render 5 cards per row
-for i in range(0, len(notes), 5):
-    row = notes[i:i+5]
-    cols = st.columns(5)
-
-    for idx, entry in enumerate(row):
-        with cols[idx]:
-            # display in the new format
-            formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
-
-            st.markdown(
-                f"""
-                <div style="{postit_style}">
-                    <div style="{date_style}">{formatted_date}</div>
-                    <div style="{text_style}">{entry['text']}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
+st.subheader("📌 Your Notes")
 
 # Ensure notes are stored as a list
 if not isinstance(st.session_state.habits.get("notes", {}), list):
@@ -541,30 +521,9 @@ if not isinstance(st.session_state.habits.get("notes", {}), list):
     st.session_state.habits["notes"] = converted
     save_data(st.session_state.habits)
 
-with st.form("add_journal_entry"):
-    colA, colB = st.columns([2,1])
-
-    with colA:
-        new_text = st.text_area(
-            "Write your note...",
-            placeholder="Your thoughts, reflections, ideas..."
-        )
-
-    with colB:
-        chosen_date = st.date_input("Select Date")
-
-    submitted = st.form_submit_button("Add Entry")
-
-    if submitted and new_text.strip():
-        st.session_state.habits["notes"].append({
-            "date": chosen_date.strftime("%Y-%m-%d"),   # store sortable format
-            "text": new_text.strip()
-        })
-        save_data(st.session_state.habits)
-        st.success("Journal entry added!")
-        st.rerun()
-
 notes = st.session_state.habits["notes"]
+
+# Sort newest first
 notes = sorted(
     notes,
     key=lambda x: datetime.strptime(x["date"], "%Y-%m-%d"),
@@ -573,7 +532,7 @@ notes = sorted(
 
 postit_style = """
     background-color: #F5C857;
-    padding-left: 15px;
+    padding: 12px;
     border-radius: 8px;
     box-shadow: 0px 6px 16px rgba(0,0,0,0.4);
     margin: 8px;
@@ -583,18 +542,120 @@ postit_style = """
 """
 
 date_style = """
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: #222222;
-    margin-top: -35px;
-    margin-bottom: -35px;
+    margin-bottom: 6px;
 """
 
 text_style = """
-    font-size: 17px;
+    font-size: 16px;
     line-height: 1.5;
-    margin-bottom: -20px;
+    margin-bottom: 10px;
 """
+
+button_row_style = "display:flex; gap:8px; margin-top:5px;"
+
+
+for i in range(0, len(notes), 5):
+    row = notes[i:i+5]
+    cols = st.columns(5)
+
+    for idx, entry in enumerate(row):
+        with cols[idx]:
+
+            # editable values need unique keys
+            note_index = st.session_state.habits["notes"].index(entry)
+
+            formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
+
+            st.markdown(
+                f"""
+                <div style="{postit_style}">
+                    <div style="{date_style}">{formatted_date}</div>
+                    <div style="{text_style}">{entry['text']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            colE, colD = st.columns([1, 1])
+
+            with colE:
+                if st.button("✏️ Edit", key=f"edit_{note_index}"):
+                    st.session_state.editing_note = note_index
+                    st.session_state.edit_text = entry["text"]
+                    st.session_state.edit_date = entry["date"]
+
+            with colD:
+                if st.button("🗑️ Delete", key=f"delete_{note_index}"):
+                    st.session_state.habits["notes"].remove(entry)
+                    save_data(st.session_state.habits)
+                    st.rerun()
+
+
+if "editing_note" in st.session_state:
+
+    st.subheader("✏️ Edit Note")
+
+    edit_colA, edit_colB = st.columns([2, 1])
+
+    with edit_colA:
+        new_text_val = st.text_area("Edit text", value=st.session_state.edit_text, key="edit_text_area")
+
+    with edit_colB:
+        new_date_val = st.date_input(
+            "Edit Date",
+            value=datetime.strptime(st.session_state.edit_date, "%Y-%m-%d"),
+            key="edit_date_picker"
+        )
+
+    col_save, col_cancel = st.columns([1, 1])
+
+    with col_save:
+        if st.button("💾 Save Changes"):
+            index = st.session_state.editing_note
+            st.session_state.habits["notes"][index] = {
+                "date": new_date_val.strftime("%Y-%m-%d"),
+                "text": new_text_val
+            }
+            save_data(st.session_state.habits)
+            del st.session_state.editing_note
+            st.success("Note updated!")
+            st.rerun()
+
+    with col_cancel:
+        if st.button("❌ Cancel Edit"):
+            del st.session_state.editing_note
+            st.rerun()
+
+
+st.divider()
+st.subheader("📝 Add New Journal Entry")
+
+with st.form("add_journal_entry"):
+
+    new_colA, new_colB = st.columns([2, 1])
+
+    with new_colA:
+        new_text = st.text_area(
+            "Write your note...",
+            placeholder="Your thoughts, reflections, ideas..."
+        )
+
+    with new_colB:
+        chosen_date = st.date_input("Select Date")
+
+    submitted = st.form_submit_button("Add Entry")
+
+    if submitted and new_text.strip():
+        st.session_state.habits["notes"].append({
+            "date": chosen_date.strftime("%Y-%m-%d"),
+            "text": new_text.strip()
+        })
+        save_data(st.session_state.habits)
+        st.success("Journal entry added!")
+        st.rerun()
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
