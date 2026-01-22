@@ -507,9 +507,9 @@ with tab1:
     st.divider()
     
 st.divider()
-st.subheader("📌 Your Notes")
+st.subheader("📝 Journal Entries")
 
-# Ensure notes are stored as list
+# Ensure notes are stored as a list
 if not isinstance(st.session_state.habits.get("notes", {}), list):
     old_notes = st.session_state.habits.get("notes", {})
     converted = []
@@ -521,9 +521,30 @@ if not isinstance(st.session_state.habits.get("notes", {}), list):
     st.session_state.habits["notes"] = converted
     save_data(st.session_state.habits)
 
-notes = st.session_state.habits["notes"]
+with st.form("add_journal_entry"):
+    colA, colB = st.columns([2,1])
 
-# Sort by newest date
+    with colA:
+        new_text = st.text_area(
+            "Write your note...",
+            placeholder="Your thoughts, reflections, ideas..."
+        )
+
+    with colB:
+        chosen_date = st.date_input("Select Date")
+
+    submitted = st.form_submit_button("Add Entry")
+
+    if submitted and new_text.strip():
+        st.session_state.habits["notes"].append({
+            "date": chosen_date.strftime("%Y-%m-%d"),   # store sortable format
+            "text": new_text.strip()
+        })
+        save_data(st.session_state.habits)
+        st.success("Journal entry added!")
+        st.rerun()
+
+notes = st.session_state.habits["notes"]
 notes = sorted(
     notes,
     key=lambda x: datetime.strptime(x["date"], "%Y-%m-%d"),
@@ -535,7 +556,10 @@ postit_style = """
     padding-left: 15px;
     border-radius: 8px;
     box-shadow: 0px 6px 16px rgba(0,0,0,0.4);
-    margin: 8px;
+    margin-left: 8px;
+    margin-right: 8px;
+    margin-top: 8px;
+    margin-bottom: 8px;
     font-family: 'Helvetica Neue', sans-serif;
     color: #222222;
     white-space: pre-wrap;
@@ -555,54 +579,32 @@ text_style = """
     margin-bottom: -20px;
 """
 
+st.markdown("### 📌 Your Notes")
+
+# Render 5 cards per row
 for i in range(0, len(notes), 5):
     row = notes[i:i+5]
     cols = st.columns(5)
 
     for idx, entry in enumerate(row):
         with cols[idx]:
-
+            # display in the new format
             formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
+
+            text = entry["text"]
+            text = text.encode("utf-8").decode("unicode_escape")
+            text = text.replace("\r\n", "\n").replace("\r", "\n")
+            text = text.replace("\n", "<br>")
 
             st.markdown(
                 f"""
                 <div style="{postit_style}">
                     <div style="{date_style}">{formatted_date}</div>
-                    <div style="{text_style}">{entry['text']}</div>
+                    <div style="{text_style}">{text}</div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-
-st.divider()
-
-with st.form("add_journal_entry"):
-
-    colA, colB = st.columns([2,1])
-
-    with colA:
-        new_text = st.text_area(
-            "Write your note...",
-            placeholder="Your thoughts, reflections, ideas..."
-        )
-
-    with colB:
-        chosen_date = st.date_input("Select Date")
-
-    submitted = st.form_submit_button("Add Entry")
-
-    if submitted and new_text.strip():
-        st.session_state.habits["notes"].append({
-            "date": chosen_date.strftime("%Y-%m-%d"),
-            "text": new_text.strip()
-        })
-        save_data(st.session_state.habits)
-        st.success("Journal entry added!")
-        st.rerun()
-
-
-st.divider()
-
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
