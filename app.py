@@ -591,9 +591,18 @@ for i in range(0, len(notes), 5):
             # display in the new format
             formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
 
+            # --- FIXED TEXT HANDLING ---
+            import html
+
             text = entry["text"]
-            text = text.encode("utf-8").decode("unicode_escape")
+
+            # normalize newlines
             text = text.replace("\r\n", "\n").replace("\r", "\n")
+
+            # safely escape HTML while keeping unicode (emoji, em dash, etc.)
+            text = html.escape(text)
+
+            # convert newlines to <br> for consistent rendering
             text = text.replace("\n", "<br>")
 
             st.markdown(
@@ -605,6 +614,7 @@ for i in range(0, len(notes), 5):
                 """,
                 unsafe_allow_html=True
             )
+
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
