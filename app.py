@@ -97,18 +97,22 @@ def calculate_streak(habit_data, end_date):
     if not habit_data.get("count"):
         return 0
 
-    # parse and sort all habit dates
-    dates = sorted(
-        (datetime.strptime(d, "%Y-%m-%d").date() for d in habit_data["count"].keys()),
-        reverse=True
-    )
+    valid_dates = set()
+
+    for d in habit_data["count"].keys():
+        try:
+            valid_dates.add(datetime.strptime(d, "%Y-%m-%d").date())
+        except ValueError:
+            # skip invalid dates like 2026-02-31
+            continue
+
+    if not valid_dates:
+        return 0
 
     streak = 0
     current = end_date
 
-    date_set = set(dates)
-
-    while current in date_set:
+    while current in valid_dates:
         streak += 1
         current -= timedelta(days=1)
 
