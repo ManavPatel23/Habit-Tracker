@@ -91,21 +91,27 @@ def get_default_data():
     }
 
 # Calculate streak for a habit
+from datetime import timedelta
+
 def calculate_streak(habit_data, end_date):
-    dates = sorted([datetime.strptime(d, "%Y-%m-%d").date() for d in habit_data['count'].keys()], reverse=True)
-    if not dates:
+    if not habit_data.get("count"):
         return 0
-    
+
+    # parse and sort all habit dates
+    dates = sorted(
+        (datetime.strptime(d, "%Y-%m-%d").date() for d in habit_data["count"].keys()),
+        reverse=True
+    )
+
     streak = 0
     current = end_date
-    
-    for d in dates:
-        if d == current:
-            streak += 1
-            current = date(current.year, current.month, current.day - 1) if current.day > 1 else date(current.year, current.month - 1 if current.month > 1 else 12, calendar.monthrange(current.year, current.month - 1 if current.month > 1 else 12)[1])
-        elif d < current:
-            break
-    
+
+    date_set = set(dates)
+
+    while current in date_set:
+        streak += 1
+        current -= timedelta(days=1)
+
     return streak
 
 # Initialize session state
