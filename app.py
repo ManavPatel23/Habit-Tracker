@@ -94,28 +94,20 @@ def get_default_data():
 from datetime import timedelta
 
 def calculate_streak(habit_data, end_date):
-    if not habit_data.get("count"):
+    dates = sorted([datetime.strptime(d, "%Y-%m-%d").date() for d in habit_data['count'].keys()], reverse=True)
+    if not dates:
         return 0
-
-    valid_dates = set()
-
-    for d in habit_data["count"].keys():
-        try:
-            valid_dates.add(datetime.strptime(d, "%Y-%m-%d").date())
-        except ValueError:
-            # skip invalid dates like 2026-02-31
-            continue
-
-    if not valid_dates:
-        return 0
-
+    
     streak = 0
     current = end_date
-
-    while current in valid_dates:
-        streak += 1
-        current -= timedelta(days=1)
-
+    
+    for d in dates:
+        if d == current:
+            streak += 1
+            current = date(current.year, current.month, current.day - 1) if current.day > 1 else date(current.year, current.month - 1 if current.month > 1 else 12, calendar.monthrange(current.year, current.month - 1 if current.month > 1 else 12)[1])
+        elif d < current:
+            break
+    
     return streak
 
 # Initialize session state
