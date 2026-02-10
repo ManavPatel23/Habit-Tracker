@@ -625,11 +625,9 @@ for i in range(0, len(notes), 5):
             with st.popover("", use_container_width=True):
                 st.markdown(f"### {formatted_date}")
                 st.markdown(
-                    f"<div style='font-size:18px; line-height:1.6; white-space:pre-wrap; padding-bottom:24px;'>{text}</div>",
+                    f"<div style='font-size:18px; line-height:1.6; white-space:pre-wrap; padding-bottom:24px;'>{safe_text}</div>",
                     unsafe_allow_html=True
                 )
-
-
 
 
 with tab2:
