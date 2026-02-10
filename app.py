@@ -609,11 +609,7 @@ for i in range(0, len(notes), 5):
             text = text.replace("\r\n", "\n").replace("\r", "\n")
             safe_text = html.escape(text).replace("\n", "<br>")
             
-            with st.popover(" ", use_container_width=True):
-            
-                st.markdown(f"### {formatted_date}")
-                st.markdown(text)
-            
+            # --- show card first ---
             st.markdown(
                 f"""
                 <div style="{postit_style}; cursor:pointer;">
@@ -624,6 +620,16 @@ for i in range(0, len(notes), 5):
                 """,
                 unsafe_allow_html=True
             )
+            
+            # --- popover trigger appears below ---
+            with st.popover("⌄", use_container_width=True):
+                st.markdown(f"### {formatted_date}")
+                st.markdown(
+                    f"<div style='font-size:18px; line-height:1.6; white-space:pre-wrap'>{text}</div>",
+                    unsafe_allow_html=True
+                )
+
+
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
