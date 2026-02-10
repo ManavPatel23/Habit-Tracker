@@ -604,33 +604,26 @@ for i in range(0, len(notes), 5):
             import html
 
             formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
-
+            
             text = entry["text"]
             text = text.replace("\r\n", "\n").replace("\r", "\n")
             safe_text = html.escape(text).replace("\n", "<br>")
-
-            preview_html = f"""
-            <div style="{postit_style}">
-                <div style="{date_style}">{formatted_date}</div>
-                <div style="{text_style}">{safe_text}</div>
-                <div class="postit-fade"></div>
-            </div>
-            """
-
-            with st.expander("", expanded=False):
-                st.markdown(preview_html, unsafe_allow_html=True)
-                st.markdown("---")
-                st.markdown(f"""
-                <div style="
-                    font-family: 'Helvetica Neue', sans-serif;
-                    color: #222222;
-                    font-size:18px;
-                    line-height:1.75;
-                ">
-                {text}
+            
+            with st.popover(" ", use_container_width=True):
+            
+                st.markdown(f"### {formatted_date}")
+                st.markdown(text)
+            
+            st.markdown(
+                f"""
+                <div style="{postit_style}; cursor:pointer;">
+                    <div style="{date_style}">{formatted_date}</div>
+                    <div style="{text_style}">{safe_text}</div>
+                    <div class="postit-fade"></div>
                 </div>
-                """, unsafe_allow_html=True)
-                                                        f
+                """,
+                unsafe_allow_html=True
+            )
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
