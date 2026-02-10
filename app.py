@@ -144,7 +144,7 @@ st.markdown("""
         bottom: 0;
         left: 0;
         right: 0;
-        height: 55px;
+        height: 120px;
         background: linear-gradient(to bottom, rgba(245,200,87,0), rgba(245,200,87,1));
         border-radius: 0 0 10px 10px;
         pointer-events: none;
@@ -579,12 +579,12 @@ postit_style = """
 """
 
 date_style = """
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 700;
     color: #222222;
-    margin-top: -35px;
-    margin-bottom: -35px;
+    margin-bottom: 8px;
 """
+
 
 text_style = """
     font-size: 17px;
@@ -609,21 +609,22 @@ for i in range(0, len(notes), 5):
             text = text.replace("\r\n", "\n").replace("\r", "\n")
             safe_text = html.escape(text).replace("\n", "<br>")
             
-            # preview card (fixed size + fade)
-            card_html = f"""
-            <div style="{postit_style}">
-                <div style="{date_style}">{formatted_date}</div>
-                <div style="{text_style}">{safe_text}</div>
-                <div class="postit-fade"></div>
-            </div>
-            """
+            with st.popover(" ", use_container_width=True):
             
-            st.markdown(card_html, unsafe_allow_html=True)
-            
-            # click → popup full note
-            with st.popover("📖 Read Full"):
                 st.markdown(f"### {formatted_date}")
                 st.markdown(text)
+            
+            st.markdown(
+                f"""
+                <div style="{postit_style}; cursor:pointer;">
+                    <div style="{date_style}">{formatted_date}</div>
+                    <div style="{text_style}">{safe_text}</div>
+                    <div class="postit-fade"></div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
