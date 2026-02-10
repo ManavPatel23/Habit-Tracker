@@ -138,6 +138,18 @@ st.markdown("""
     .stApp {
         background-color: #0a0a0a;
     }
+
+    .postit-fade {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 55px;
+        background: linear-gradient(to bottom, rgba(245,200,87,0), rgba(245,200,87,1));
+        border-radius: 0 0 10px 10px;
+        pointer-events: none;
+    }
+
     
     .day-cell {
         border: 1px solid #333;
@@ -555,16 +567,15 @@ notes = sorted(
 
 postit_style = """
     background-color: #F5C857;
-    padding-left: 15px;
-    border-radius: 8px;
+    padding: 16px;
+    border-radius: 10px;
     box-shadow: 0px 6px 16px rgba(0,0,0,0.4);
-    margin-left: 8px;
-    margin-right: 8px;
-    margin-top: 8px;
-    margin-bottom: 8px;
+    margin: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: #222222;
-    white-space: pre-wrap;
+    height: 210px;
+    position: relative;
+    overflow: hidden;
 """
 
 date_style = """
@@ -590,33 +601,29 @@ for i in range(0, len(notes), 5):
 
     for idx, entry in enumerate(row):
         with cols[idx]:
-            # display in the new format
-            formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
-
-            # --- FIXED TEXT HANDLING ---
             import html
 
+            formatted_date = datetime.strptime(entry["date"], "%Y-%m-%d").strftime("%d %b %Y")
+            
             text = entry["text"]
-
-            # normalize newlines
             text = text.replace("\r\n", "\n").replace("\r", "\n")
-
-            # safely escape HTML while keeping unicode (emoji, em dash, etc.)
-            text = html.escape(text)
-
-            # convert newlines to <br> for consistent rendering
-            text = text.replace("\n", "<br>")
-
-            st.markdown(
-                f"""
-                <div style="{postit_style}">
-                    <div style="{date_style}">{formatted_date}</div>
-                    <div style="{text_style}">{text}</div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
+            safe_text = html.escape(text).replace("\n", "<br>")
+            
+            # preview card (fixed size + fade)
+            card_html = f"""
+            <div style="{postit_style}">
+                <div style="{date_style}">{formatted_date}</div>
+                <div style="{text_style}">{safe_text}</div>
+                <div class="postit-fade"></div>
+            </div>
+            """
+            
+            st.markdown(card_html, unsafe_allow_html=True)
+            
+            # click → popup full note
+            with st.popover("📖 Read Full"):
+                st.markdown(f"### {formatted_date}")
+                st.markdown(text)
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
