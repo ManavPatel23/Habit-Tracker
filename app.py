@@ -573,7 +573,7 @@ postit_style = """
     margin: 10px;
     font-family: 'Helvetica Neue', sans-serif;
     color: #222222;
-    height: 210px;
+    height: 320px;
     position: relative;
     overflow: hidden;
 """
@@ -620,7 +620,17 @@ for i in range(0, len(notes), 5):
             with st.expander("", expanded=False):
                 st.markdown(preview_html, unsafe_allow_html=True)
                 st.markdown("---")
-                st.markdown(text)
+                st.markdown(f"""
+                <div style="
+                    font-family: 'Helvetica Neue', sans-serif;
+                    color: #222222;
+                    font-size:18px;
+                    line-height:1.75;
+                ">
+                {text}
+                </div>
+                """, unsafe_allow_html=True)
+                                                        f
 
 with tab2:
     st.subheader("📊 Visualization Dashboard")
